@@ -1,4 +1,6 @@
-const generateEnrollmentNumberforTeacher = require("../utils/helperFunctions");
+const {
+  generateEnrollmentNumberforTeacher,
+} = require("../utils/helperFunctions");
 const { teacherValidationSchema } = require("../validations/teacherValidation");
 const Teacher = require("../models/teacherModel");
 
@@ -23,6 +25,7 @@ module.exports.createTeacher = async (req, res) => {
       dob,
       address,
       designation,
+      department,
       joiningDate,
       status,
     } = value;
@@ -50,6 +53,7 @@ module.exports.createTeacher = async (req, res) => {
       dob,
       address,
       designation,
+      department,
       joiningDate,
       status,
     });
@@ -108,7 +112,7 @@ module.exports.getTeacherById = async (req, res) => {
 };
 
 module.exports.updateTeacher = async (req, res) => {
-  const enrollNo = req.params.empNo;
+  const enrollNo = req.params.enrollNo;
   const { error, value } = teacherValidationSchema.validate(req.body, {
     abortEarly: false,
   });

@@ -24,6 +24,10 @@ const guardianSchema = new mongoose.Schema(
 const studentSchema = new mongoose.Schema(
   {
     studentId: { type: String, required: true, unique: true },
+    password: {
+      type: String,
+      required: false,
+    },
     enrollmentNo: {
       type: String,
       required: true,

@@ -1,11 +1,7 @@
 const Joi = require("joi");
 
 const teacherValidationSchema = Joi.object({
-  name: Joi.object({
-    firstName: Joi.string().trim().required(),
-    middleName: Joi.string().trim().optional().allow(""),
-    lastName: Joi.string().trim().required(),
-  }).required(),
+  name: Joi.string().trim().required(),
 
   email: Joi.string().email().trim().required(),
 
@@ -30,10 +26,11 @@ const teacherValidationSchema = Joi.object({
   }).optional(),
 
   designation: Joi.string().optional().allow(""),
+  department: Joi.string().optional().allow(""),
 
   joiningDate: Joi.date().optional(),
 
   status: Joi.string().valid("Active", "Inactive", "On Leave").optional(),
 });
 
-module.exports = teacherValidationSchema;
+module.exports = { teacherValidationSchema };

@@ -1,6 +1,125 @@
-const generateEnrollmentNumber = require("../utils/helperFunctions");
+const { generateEnrollmentNumber } = require("../utils/helperFunctions");
 const { studentSchema } = require("../validations/studentValidation");
 const Student = require("../models/studentData");
+const FeeStructure = require("../models/feeStructure");
+const FeeCollection = require("../models/feeCollection");
+
+// module.exports.createStudent = async (req, res) => {
+//   const { error, value } = studentSchema.validate(req.body, {
+//     abortEarly: false,
+//   });
+
+//   if (error) {
+//     return res.status(400).json({
+//       message: "Validation failed",
+//       errors: error.details.map((e) => e.message),
+//     });
+//   }
+//   try {
+//     const {
+//       firstName,
+//       middleName,
+//       lastName,
+//       gender,
+//       dob,
+//       bloodGroup,
+//       religion,
+//       caste,
+//       nationality,
+//       photoUrl,
+
+//       className,
+//       section,
+//       academicYear,
+//       admissionDate,
+//       rollNo,
+
+//       phone,
+//       email,
+
+//       address,
+//       father,
+//       mother,
+//       guardian,
+
+//       transportOpted,
+//       busRoute,
+//       pickupPoint,
+
+//       medicalConditions,
+//       status,
+//       remarks,
+//       documents,
+
+//       createdBy,
+//     } = value;
+
+//     const lastEnrollment = await Student.findOne()
+//       .sort({ enrollmentNo: -1 })
+//       .limit(1);
+//     console.log("Last Enrollment:", lastEnrollment);
+//     const currentEnrollment = lastEnrollment
+//       ? lastEnrollment.enrollmentNo
+//       : "ABHA05A000";
+//     const enrollmentNo = generateEnrollmentNumber(currentEnrollment);
+//     console.log("New Enrollment Number:", enrollmentNo);
+//     const admissionNo = "ADM" + Date.now();
+//     console.log("Admission Number:", admissionNo);
+//     const studentId = "STU" + Date.now();
+
+//     const newStudent = new Student({
+//       studentId,
+//       enrollmentNo,
+//       admissionNo,
+//       firstName,
+//       middleName,
+//       lastName,
+//       gender,
+//       dob,
+//       bloodGroup,
+//       religion,
+//       caste,
+//       nationality,
+//       photoUrl,
+
+//       className,
+//       section,
+//       academicYear,
+//       admissionDate,
+//       rollNo,
+
+//       phone,
+//       email,
+//       address,
+
+//       father,
+//       mother,
+//       guardian,
+
+//       transportOpted,
+//       busRoute,
+//       pickupPoint,
+
+//       medicalConditions,
+//       status,
+//       remarks,
+//       documents,
+
+//       createdBy,
+//     });
+//     const savedStudent = await newStudent.save();
+//     console.log("New Student Registered:", savedStudent);
+//     return res.status(201).json({
+//       message: "Student registered successfully",
+//       student: savedStudent,
+//     });
+//   } catch (error) {
+//     console.error("Error during student registration:", error);
+//     return res
+//       .status(500)
+//       .json({ message: "Internal server error", error: error.message });
+//   }
+// };
 
 module.exports.createStudent = async (req, res) => {
   const { error, value } = studentSchema.validate(req.body, {
@@ -13,6 +132,7 @@ module.exports.createStudent = async (req, res) => {
       errors: error.details.map((e) => e.message),
     });
   }
+
   try {
     const {
       firstName,
@@ -25,46 +145,39 @@ module.exports.createStudent = async (req, res) => {
       caste,
       nationality,
       photoUrl,
-
       className,
       section,
       academicYear,
       admissionDate,
       rollNo,
-
       phone,
       email,
-
       address,
       father,
       mother,
       guardian,
-
       transportOpted,
       busRoute,
       pickupPoint,
-
       medicalConditions,
       status,
       remarks,
       documents,
-
       createdBy,
     } = value;
 
+    // Generate IDs
     const lastEnrollment = await Student.findOne()
       .sort({ enrollmentNo: -1 })
       .limit(1);
-    console.log("Last Enrollment:", lastEnrollment);
     const currentEnrollment = lastEnrollment
       ? lastEnrollment.enrollmentNo
       : "ABHA05A000";
     const enrollmentNo = generateEnrollmentNumber(currentEnrollment);
-    console.log("New Enrollment Number:", enrollmentNo);
     const admissionNo = "ADM" + Date.now();
-    console.log("Admission Number:", admissionNo);
     const studentId = "STU" + Date.now();
 
+    // Save student
     const newStudent = new Student({
       studentId,
       enrollmentNo,
@@ -79,43 +192,74 @@ module.exports.createStudent = async (req, res) => {
       caste,
       nationality,
       photoUrl,
-
       className,
       section,
       academicYear,
       admissionDate,
       rollNo,
-
       phone,
       email,
       address,
-
       father,
       mother,
       guardian,
-
       transportOpted,
       busRoute,
       pickupPoint,
-
       medicalConditions,
       status,
       remarks,
       documents,
-
       createdBy,
     });
+
     const savedStudent = await newStudent.save();
-    console.log("New Student Registered:", savedStudent);
+
+    // 🔄 Generate FeeCollection for the student
+    const feeStructure = await FeeStructure.findOne({
+      // academicYear,
+      class: className,
+      isActive: true,
+    });
+
+    if (!feeStructure) {
+      console.warn("Fee structure not found for student", enrollmentNo);
+    } else {
+      const feeComponents = feeStructure.feeComponents.map((component) => ({
+        componentName: component.componentName,
+        amount: component.amount,
+        dueDate: new Date(),
+        isPaid: false,
+      }));
+
+      const totalAmount = feeComponents.reduce((sum, fc) => sum + fc.amount, 0);
+
+      const newFeeCollection = new FeeCollection({
+        receiptNumber: "RCPT" + Date.now(),
+        studentId: savedStudent._id,
+        academicYear,
+        feeComponents,
+        totalAmount,
+        paidAmount: 0,
+        pendingAmount: totalAmount,
+        paymentStatus: "PENDING",
+        dueDate: new Date(),
+      });
+
+      await newFeeCollection.save();
+      console.log("FeeCollection created for student:", enrollmentNo);
+    }
+
     return res.status(201).json({
-      message: "Student registered successfully",
+      message: "Student registered successfully with fee collection",
       student: savedStudent,
     });
   } catch (error) {
     console.error("Error during student registration:", error);
-    return res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
+    return res.status(500).json({
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 
@@ -160,7 +304,7 @@ module.exports.getStudentById = async (req, res) => {
 };
 
 module.exports.updateStudent = async (req, res) => {
-  const enrollNo = req.params.empNo;
+  const enrollNo = req.params.enrollNo;
   const { error, value } = studentSchema.validate(req.body, {
     abortEarly: false,
   });
@@ -175,6 +319,7 @@ module.exports.updateStudent = async (req, res) => {
     if (!enrollNo) {
       return res.status(400).json({ message: "Enrollment number is required" });
     }
+    console.log(req.body, "request body");
 
     const student = await Student.findOneAndUpdate(
       { enrollmentNo: enrollNo },

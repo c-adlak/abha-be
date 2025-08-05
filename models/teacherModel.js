@@ -1,3 +1,4 @@
+const { required } = require("joi");
 const mongoose = require("mongoose");
 
 const teacherSchema = new mongoose.Schema(
@@ -7,10 +8,14 @@ const teacherSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    password: {
+      type: String,
+      required: false,
+    },
     name: {
-      firstName: { type: String, required: true, trim: true },
-      middleName: { type: String, trim: true },
-      lastName: { type: String, required: true, trim: true },
+      type: String,
+      required: true,
+      trim: true,
     },
     email: {
       type: String,
@@ -42,6 +47,7 @@ const teacherSchema = new mongoose.Schema(
       country: String,
     },
     designation: String,
+    department: String,
     joiningDate: Date,
     status: {
       type: String,
