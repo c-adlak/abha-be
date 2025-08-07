@@ -71,6 +71,8 @@ exports.getFeeDetails = async (req, res) => {
   }
 };
 
+
+//removal of the following
 exports.generateFeeCollection = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();

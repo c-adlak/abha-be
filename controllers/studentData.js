@@ -3,6 +3,7 @@ const { studentSchema } = require("../validations/studentValidation");
 const Student = require("../models/studentData");
 const FeeStructure = require("../models/feeStructure");
 const FeeCollection = require("../models/feeCollection");
+const bcrypt = require("bcryptjs");
 
 // module.exports.createStudent = async (req, res) => {
 //   const { error, value } = studentSchema.validate(req.body, {
@@ -177,11 +178,15 @@ module.exports.createStudent = async (req, res) => {
     const admissionNo = "ADM" + Date.now();
     const studentId = "STU" + Date.now();
 
+    // Hash the default password (enrollment number)
+    const hashedPassword = await bcrypt.hash(enrollmentNo, 12);
+
     // Save student
     const newStudent = new Student({
       studentId,
       enrollmentNo,
       admissionNo,
+      password: hashedPassword, // Set the hashed password
       firstName,
       middleName,
       lastName,
@@ -253,6 +258,7 @@ module.exports.createStudent = async (req, res) => {
     return res.status(201).json({
       message: "Student registered successfully with fee collection",
       student: savedStudent,
+      defaultPassword: enrollmentNo, // Return the default password for admin reference
     });
   } catch (error) {
     console.error("Error during student registration:", error);

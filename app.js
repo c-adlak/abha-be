@@ -8,10 +8,14 @@ const TeacherRoute = require("./routes/teachersRouter");
 const { Student } = require("./models/studentData");
 const { setStudentPassword } = require("./utils/helperFunctions");
 const { setTeacherPassword } = require("./utils/helperFunctions");
+const { createDefaultAdmin } = require("./utils/helperFunctions");
 
 const errorHandler = require("./middleware/errorHandler");
 const feeRoutes = require("./routes/feeRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const classRoutes = require("./routes/classRoutes");
+const subjectRoutes = require("./routes/subjectRoutes");
+const examRoutes = require("./routes/examRoutes");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const port = 5000;
@@ -49,13 +53,14 @@ async function connectToDatabase() {
     console.error("Error while connecting to the database:", error);
   }
 }
-console.log("Setting up initial student password...");
+console.log("Setting up initial credentials...");
 
 console.log("RAZORPAY_KEY_ID:", process.env.RAZORPAY_KEY_ID);
 console.log("RAZORPAY_KEY_SECRET:", process.env.RAZORPAY_KEY_SECRET);
 
-setStudentPassword("ABHA05A001", "abha@123");
+setStudentPassword("ABHA05A007", "abha@123");
 setTeacherPassword("ABHA05A001", "abha@123");
+createDefaultAdmin("admin@school.com", "admin123");
 connectToDatabase();
 
 app.use("/api/auth", authRoutes);
@@ -63,6 +68,9 @@ app.use("/api/student", StudentDataRoute);
 app.use("/api/teachers", TeacherRoute);
 app.use("/api/fees", feeRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/classes", classRoutes);
+app.use("/api/subjects", subjectRoutes);
+app.use("/api/exams", examRoutes);
 
 app.get("/", (req, res) => {
   console.log("GET request received at /", req.body);

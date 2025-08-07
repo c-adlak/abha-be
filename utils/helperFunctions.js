@@ -1,5 +1,6 @@
 const Student = require("../models/studentData");
 const Teacher = require("../models/teacherModel");
+const Admin = require("../models/adminModel");
 const bcrypt = require("bcryptjs");
 function generateEnrollmentNumber(currentEnrollment = "ABHA05A000") {
   const schoolCode = currentEnrollment.slice(0, 4); // "ABHA"
@@ -76,9 +77,37 @@ async function setTeacherPassword(enrollmentNo, plainPassword) {
   }
 }
 
+async function createDefaultAdmin(enrollmentNo, plainPassword) {
+  console.log("Creating default admin with enrollmentNo:", enrollmentNo);
+  try {
+    const existingAdmin = await Admin.findOne({ enrollmentNo: enrollmentNo });
+    if (existingAdmin) {
+      console.log("Admin already exists with enrollmentNo:", enrollmentNo);
+      return;
+    }
+    
+    const hashedPassword = await bcrypt.hash(plainPassword, 12);
+    const admin = await Admin.create({
+      enrollmentNo: enrollmentNo,
+      name: "System Administrator",
+      email: enrollmentNo,
+      password: hashedPassword,
+      role: "admin"
+    });
+    
+    console.log("✅ Default admin created successfully!");
+    console.log("📧 Login ID:", enrollmentNo);
+    console.log("🔑 Password:", plainPassword);
+    console.log("👤 Role: admin");
+  } catch (error) {
+    console.error("Error creating default admin:", error.message);
+  }
+}
+
 module.exports = {
   setTeacherPassword,
   setStudentPassword,
+  createDefaultAdmin,
   generateEnrollmentNumber,
   generateEnrollmentNumberforTeacher,
 };

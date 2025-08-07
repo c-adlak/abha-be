@@ -3,6 +3,7 @@ const {
 } = require("../utils/helperFunctions");
 const { teacherValidationSchema } = require("../validations/teacherValidation");
 const Teacher = require("../models/teacherModel");
+const bcrypt = require("bcryptjs");
 
 module.exports.createTeacher = async (req, res) => {
   const { error, value } = teacherValidationSchema.validate(req.body, {
@@ -39,12 +40,13 @@ module.exports.createTeacher = async (req, res) => {
       : "ABHATEA000";
     const enrollmentNo = generateEnrollmentNumberforTeacher(currentEnrollment);
     console.log("New Enrollment Number:", enrollmentNo);
-    // const admissionNo = "ADM" + Date.now();
-    // console.log("Admission Number:", admissionNo);
-    // const studentId = "STU" + Date.now();
+
+    // Hash the default password (enrollment number)
+    const hashedPassword = await bcrypt.hash(enrollmentNo, 12);
 
     const newTeacher = new Teacher({
       enrollmentNo,
+      password: hashedPassword, // Set the hashed password
       name,
       email,
       contact,
@@ -58,10 +60,11 @@ module.exports.createTeacher = async (req, res) => {
       status,
     });
     const savedTeacher = await newTeacher.save();
-    console.log("New Student Registered:", savedTeacher);
+    console.log("New Teacher Registered:", savedTeacher);
     return res.status(201).json({
       message: "Teacher registered successfully",
-      student: savedTeacher,
+      teacher: savedTeacher,
+      defaultPassword: enrollmentNo, // Return the default password for admin reference
     });
   } catch (error) {
     console.error("Error during Teacher registration:", error);
