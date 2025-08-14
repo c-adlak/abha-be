@@ -1,0 +1,47 @@
+Academic Year,Class,Component Name,Amount,Frequency,Due Day,isOptional,Description
+2025-2026,Nursery,Tuition,800,MONTHLY,10,false,Monthly tuition fee
+2025-2026,Nursery,Transport,500,MONTHLY,10,true,Optional transport fee
+2025-2026,Nursery,Annual Charges,3000,ANNUALLY,30,false,One-time annual charge
+2025-2026,LKG,Tuition,900,MONTHLY,10,false,Monthly tuition fee
+2025-2026,LKG,Transport,500,MONTHLY,10,true,Optional transport fee
+2025-2026,LKG,Annual Charges,3200,ANNUALLY,30,false,One-time annual charge
+2025-2026,UKG,Tuition,1000,MONTHLY,10,false,Monthly tuition fee
+2025-2026,UKG,Transport,600,MONTHLY,10,true,Optional transport fee
+2025-2026,UKG,Annual Charges,3500,ANNUALLY,30,false,One-time annual charge
+2025-2026,1,Tuition,1100,MONTHLY,10,false,Monthly tuition fee
+2025-2026,1,Transport,600,MONTHLY,10,true,Optional transport fee
+2025-2026,1,Annual Charges,4000,ANNUALLY,30,false,One-time annual charge
+2025-2026,2,Tuition,1200,MONTHLY,10,false,Monthly tuition fee
+2025-2026,2,Transport,700,MONTHLY,10,true,Optional transport fee
+2025-2026,2,Annual Charges,4200,ANNUALLY,30,false,One-time annual charge
+2025-2026,3,Tuition,1300,MONTHLY,10,false,Monthly tuition fee
+2025-2026,3,Transport,700,MONTHLY,10,true,Optional transport fee
+2025-2026,3,Annual Charges,4400,ANNUALLY,30,false,One-time annual charge
+2025-2026,4,Tuition,1400,MONTHLY,10,false,Monthly tuition fee
+2025-2026,4,Transport,800,MONTHLY,10,true,Optional transport fee
+2025-2026,4,Annual Charges,4600,ANNUALLY,30,false,One-time annual charge
+2025-2026,5,Tuition,1500,MONTHLY,10,false,Monthly tuition fee
+2025-2026,5,Transport,800,MONTHLY,10,true,Optional transport fee
+2025-2026,5,Annual Charges,4800,ANNUALLY,30,false,One-time annual charge
+2025-2026,6,Tuition,1600,MONTHLY,10,false,Monthly tuition fee
+2025-2026,6,Transport,900,MONTHLY,10,true,Optional transport fee
+2025-2026,6,Annual Charges,5000,ANNUALLY,30,false,One-time annual charge
+2025-2026,7,Tuition,1700,MONTHLY,10,false,Monthly tuition fee
+2025-2026,7,Transport,900,MONTHLY,10,true,Optional transport fee
+2025-2026,7,Annual Charges,5200,ANNUALLY,30,false,One-time annual charge
+2025-2026,8,Tuition,1800,MONTHLY,10,false,Monthly tuition fee
+2025-2026,8,Transport,1000,MONTHLY,10,true,Optional transport fee
+2025-2026,8,Annual Charges,5400,ANNUALLY,30,false,One-time annual charge
+2025-2026,9,Tuition,1900,MONTHLY,10,false,Monthly tuition fee
+2025-2026,9,Transport,1000,MONTHLY,10,true,Optional transport fee
+2025-2026,9,Annual Charges,5600,ANNUALLY,30,false,One-time annual charge
+2025-2026,10,Tuition,2000,MONTHLY,10,false,Monthly tuition fee
+2025-2026,10,Transport,1100,MONTHLY,10,true,Optional transport fee
+2025-2026,10,Annual Charges,6000,ANNUALLY,30,false,One-time annual charge
+2025-2026,11,Tuition,2200,MONTHLY,10,false,Monthly tuition fee
+2025-2026,11,Transport,1200,MONTHLY,10,true,Optional transport fee
+2025-2026,11,Annual Charges,6500,ANNUALLY,30,false,One-time annual charge
+2025-2026,12,Tuition,2400,MONTHLY,10,false,Monthly tuition fee
+2025-2026,12,Transport,1300,MONTHLY,10,true,Optional transport fee
+2025-2026,12,Annual Charges,7000,ANNUALLY,30,false,One-time annual charge
+

@@ -37,11 +37,11 @@ const examResultSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    submittedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "teacher",
-      required: true,
-    },
+    // submittedBy: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "teacher",
+    //   required: true,
+    // },
     submittedAt: {
       type: Date,
       default: Date.now,

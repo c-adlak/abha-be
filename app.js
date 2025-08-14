@@ -2,10 +2,11 @@ const express = require("express");
 const app = express();
 const cors = require("cors");
 const mongoose = require("mongoose");
+const path = require("path");
 const authRoutes = require("./routes/auth");
 const StudentDataRoute = require("./routes/studentData");
 const TeacherRoute = require("./routes/teachersRouter");
-const { Student } = require("./models/studentData");
+// const Student = require("./models/studentData");
 const { setStudentPassword } = require("./utils/helperFunctions");
 const { setTeacherPassword } = require("./utils/helperFunctions");
 const { createDefaultAdmin } = require("./utils/helperFunctions");
@@ -15,10 +16,14 @@ const feeRoutes = require("./routes/feeRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const classRoutes = require("./routes/classRoutes");
 const subjectRoutes = require("./routes/subjectRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const examRoutes = require("./routes/examRoutes");
+const promotionRoutes = require("./routes/promotionRoutes");
+const timetableRoutes = require("./routes/timetableRoutes");
+const attendanceRoutes = require("./routes/attendanceRoutes");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
-const port = 5000;
+const port = process.env.PORT || 5000;
 require("dotenv").config();
 // require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
@@ -28,13 +33,13 @@ app.use(
   cors({
     origin: ["http://localhost:5174", "http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
     credentials: true,
   })
 );
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
   message: "Too many requests from this IP, please try again later.",
 });
 app.use(limiter);
@@ -55,8 +60,7 @@ async function connectToDatabase() {
 }
 console.log("Setting up initial credentials...");
 
-console.log("RAZORPAY_KEY_ID:", process.env.RAZORPAY_KEY_ID);
-console.log("RAZORPAY_KEY_SECRET:", process.env.RAZORPAY_KEY_SECRET);
+// Do not log sensitive environment variables in production
 
 setStudentPassword("ABHA05A007", "abha@123");
 setTeacherPassword("ABHA05A001", "abha@123");
@@ -71,7 +75,13 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/classes", classRoutes);
 app.use("/api/subjects", subjectRoutes);
 app.use("/api/exams", examRoutes);
+app.use("/api/promotions", promotionRoutes);
+app.use("/api/timetable", timetableRoutes);
+app.use("/api/attendance", attendanceRoutes);
+app.use("/api/admin", adminRoutes);
 
+// Serve generated receipts statically
+app.use("/receipts", express.static(path.join(__dirname, "receipts")));
 app.get("/", (req, res) => {
   console.log("GET request received at /", req.body);
   res.json({ message: "/ endpoint is working!" });

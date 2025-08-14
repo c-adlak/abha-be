@@ -1,4 +1,3 @@
-const { required } = require("joi");
 const mongoose = require("mongoose");
 
 const teacherSchema = new mongoose.Schema(
@@ -49,11 +48,16 @@ const teacherSchema = new mongoose.Schema(
     designation: String,
     department: String,
     joiningDate: Date,
+    resignationDate: Date,
     status: {
       type: String,
-      enum: ["Active", "Inactive", "On Leave"],
+      enum: ["Active", "Inactive", "On Leave", "Resigned", "Terminated"],
       default: "Active",
     },
+    
+    // Password Management
+    isFirstLogin: { type: Boolean, default: true },
+    passwordChangedAt: Date,
   },
   {
     timestamps: true,

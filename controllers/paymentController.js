@@ -8,6 +8,14 @@ const razorpay = require("../config/razorpay");
 
 exports.createOrder = async (req, res) => {
   console.log(razorpay, "razorpay <");
+  
+  // Check if Razorpay is configured
+  if (!razorpay) {
+    return res.status(503).json({ 
+      message: "Payment gateway is not configured. Please contact administrator." 
+    });
+  }
+  
   try {
     const { amount, receipt, studentId, feeCollectionId } = req.body;
     console.log("Creating order with data:", {
@@ -40,7 +48,7 @@ exports.createOrder = async (req, res) => {
       notes: {
         studentId: studentId,
         feeCollectionId: feeCollectionId,
-        studentName: student.name,
+        studentName: `${student.firstName ?? ""} ${student.lastName ?? ""}`.trim(),
       },
     };
 
@@ -55,6 +63,13 @@ exports.createOrder = async (req, res) => {
 };
 
 exports.verifyAndRecordPayment = async (req, res) => {
+  // Check if Razorpay is configured
+  if (!razorpay) {
+    return res.status(503).json({ 
+      message: "Payment gateway is not configured. Please contact administrator." 
+    });
+  }
+  
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -65,7 +80,7 @@ exports.verifyAndRecordPayment = async (req, res) => {
       razorpay_signature,
       studentId,
       feeCollectionId,
-      amount,
+      amount, // ignored for verification; kept for backward compat
     } = req.body;
 
     // Verify signature
@@ -76,6 +91,12 @@ exports.verifyAndRecordPayment = async (req, res) => {
 
     if (generated_signature !== razorpay_signature) {
       throw new Error("Invalid payment signature");
+    }
+
+    // Fetch payment details from Razorpay to verify amount and order linkage
+    const payment = await razorpay.payments.fetch(razorpay_payment_id);
+    if (!payment || payment.order_id !== razorpay_order_id) {
+      throw new Error("Payment order mismatch");
     }
 
     // Check if transaction already exists
@@ -95,9 +116,10 @@ exports.verifyAndRecordPayment = async (req, res) => {
       throw new Error("Fee collection not found");
     }
 
-    // Validate amount
+    // Validate amount using gateway amount
     const expectedAmount = feeCollection.pendingAmount + feeCollection.lateFee;
-    if (Math.abs(amount - expectedAmount) > 1) {
+    const paidAmountRupees = (payment.amount || 0) / 100;
+    if (Math.abs(paidAmountRupees - expectedAmount) > 1) {
       // Allow ₹1 difference for rounding
       throw new Error("Payment amount mismatch");
     }
@@ -107,7 +129,7 @@ exports.verifyAndRecordPayment = async (req, res) => {
       transactionId: razorpay_payment_id,
       feeCollectionId,
       studentId,
-      amount,
+      amount: paidAmountRupees,
       paymentMethod: "ONLINE",
       paymentGateway: "RAZORPAY",
       gatewayTransactionId: razorpay_payment_id,
@@ -119,7 +141,7 @@ exports.verifyAndRecordPayment = async (req, res) => {
     await transaction.save({ session });
 
     // Update fee collection
-    feeCollection.paidAmount += amount;
+    feeCollection.paidAmount += paidAmountRupees;
     feeCollection.pendingAmount = Math.max(
       0,
       feeCollection.totalAmount +
@@ -128,13 +150,13 @@ exports.verifyAndRecordPayment = async (req, res) => {
     );
 
     // Update component payment status
-    let remainingAmount = amount;
+    let remainingAmount = paidAmountRupees;
     for (const component of feeCollection.feeComponents) {
       if (!component.isPaid && remainingAmount > 0) {
-        const componentDue = component.amount - component.paidAmount;
+        const componentDue = (component.amount - (component.paidAmount || 0));
         const paymentForComponent = Math.min(remainingAmount, componentDue);
 
-        component.paidAmount += paymentForComponent;
+        component.paidAmount = (component.paidAmount || 0) + paymentForComponent;
         if (component.paidAmount >= component.amount) {
           component.isPaid = true;
           component.paidDate = new Date();
@@ -192,7 +214,7 @@ exports.getTransactionHistory = async (req, res) => {
 
     const transactions = await PaymentTransaction.find(query)
       .populate("feeCollectionId", "receiptNumber term academicYear")
-      .populate("studentId", "name studentId class")
+      .populate("studentId", "firstName lastName enrollmentNo studentId className section")
       .sort({ paymentDate: -1 })
       .limit(limit * 1)
       .skip((page - 1) * limit);
@@ -214,6 +236,13 @@ exports.getTransactionHistory = async (req, res) => {
 };
 
 exports.processRefund = async (req, res) => {
+  // Check if Razorpay is configured
+  if (!razorpay) {
+    return res.status(503).json({ 
+      message: "Payment gateway is not configured. Please contact administrator." 
+    });
+  }
+  
   const session = await mongoose.startSession();
   session.startTransaction();
 

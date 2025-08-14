@@ -5,9 +5,11 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
 module.exports.login = async (req, res) => {
-  const { enrollmentNo, password } = req.body;
+  const { identifier, password } = req.body; // identifier is scholarNumber
   try {
-    const student = await Student.findOne({ enrollmentNo });
+    const student = await Student.findOne({
+      scholarNumber: identifier,
+    });
     if (!student) {
       return res.status(404).json({ message: "student not found" });
     }
@@ -25,9 +27,23 @@ module.exports.login = async (req, res) => {
         id: student._id,
         studentId: student.studentId,
         firstName: student.firstName,
+        middleName: student.middleName,
         lastName: student.lastName,
         enrollmentNo: student.enrollmentNo,
-        class: student.className,
+        scholarNumber: student.scholarNumber,
+        className: student.className,
+        section: student.section,
+        rollNo: student.rollNo,
+        academicYear: student.academicYear,
+        gender: student.gender,
+        dob: student.dob,
+        bloodGroup: student.bloodGroup,
+        phone: student.phone,
+        email: student.email,
+        address: student.address,
+        father: student.father,
+        mother: student.mother,
+        admissionDate: student.admissionDate,
         user: "STUDENT",
       },
     });
@@ -35,7 +51,7 @@ module.exports.login = async (req, res) => {
     console.error("Error during login:", error);
     return res
       .status(500)
-      .json({ message: "Interval server error", error: error.message });
+      .json({ message: "Internal server error", error: error.message });
   }
 };
 
@@ -60,7 +76,7 @@ module.exports.teacherLogin = async (req, res) => {
         id: teacher._id,
         // studentId: teacher.studentId,
         name: teacher.name,
-        emial: teacher.email,
+        email: teacher.email,
         enrollmentNo: teacher.enrollmentNo,
         user: "TEACHER",
       },
@@ -69,21 +85,22 @@ module.exports.teacherLogin = async (req, res) => {
     console.error("Error during login:", error);
     return res
       .status(500)
-      .json({ message: "Interval server error", error: error.message });
+      .json({ message: "Internal server error", error: error.message });
   }
 };
 
 module.exports.adminLogin = async (req, res) => {
-  const { enrollmentNo, password } = req.body;
-  console.log("Admin login attempt:", { enrollmentNo, password: password ? "***" : "empty" });
+  const { identifier, password, enrollmentNo: legacyEnrollmentNo } = req.body;
+  const adminIdentifier = identifier || legacyEnrollmentNo; // support both payloads
+  console.log("Admin login attempt:", { enrollmentNo: adminIdentifier, password: password ? "***" : "empty" });
   
   try {
     // Check if admin exists
-    let admin = await Admin.findOne({ enrollmentNo });
+    let admin = await Admin.findOne({ enrollmentNo: adminIdentifier });
     console.log("Admin found:", admin ? "Yes" : "No");
     
     // If admin doesn't exist and this is the default admin credentials, create it
-    if (!admin && enrollmentNo === "admin@school.com") {
+    if (!admin && adminIdentifier === "admin@school.com") {
       console.log("Creating default admin...");
       const hashedPassword = await bcrypt.hash("admin123", 12);
       admin = await Admin.create({
@@ -106,7 +123,7 @@ module.exports.adminLogin = async (req, res) => {
     console.log("Password valid:", isPasswordValid);
     
     // If password doesn't match and this is the default admin, reset the password
-    if (!isPasswordValid && enrollmentNo === "admin@school.com" && password === "admin123") {
+    if (!isPasswordValid && adminIdentifier === "admin@school.com" && password === "admin123") {
       console.log("Resetting admin password...");
       const hashedPassword = await bcrypt.hash("admin123", 12);
       admin.password = hashedPassword;

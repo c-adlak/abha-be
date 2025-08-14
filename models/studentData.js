@@ -21,6 +21,27 @@ const guardianSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const documentSchema = new mongoose.Schema(
+  {
+    fileName: String,
+    url: String,
+    uploadedAt: Date,
+    documentType: String, // e.g., "Aadhar", "PAN", "Birth Certificate", etc.
+  },
+  { _id: false }
+);
+
+const bankDetailsSchema = new mongoose.Schema(
+  {
+    bankName: String,
+    ifscCode: String,
+    branchName: String,
+    accountNo: String,
+    accountHolderName: String,
+  },
+  { _id: false }
+);
+
 const studentSchema = new mongoose.Schema(
   {
     studentId: { type: String, required: true, unique: true },
@@ -30,13 +51,18 @@ const studentSchema = new mongoose.Schema(
     },
     enrollmentNo: {
       type: String,
-      required: true,
-      unique: true,
-      index: true,
+      required: false,
+      unique: false,
     },
     admissionNo: {
       type: String,
+      unique: false,
+    },
+    scholarNumber: {
+      type: String,
+      required: true,
       unique: true,
+      index: true,
     },
 
     firstName: { type: String, required: true },
@@ -67,6 +93,22 @@ const studentSchema = new mongoose.Schema(
     mother: guardianSchema,
     guardian: guardianSchema, // For single-parent or custodian cases
 
+    // Government IDs
+    samagraId: String,
+    aadharCard: String,
+    pan: String,
+
+    // Documents
+    birthCertificate: String,
+    casteCertificate: String,
+    transferCertificate: String,
+    migrationCertificate: String,
+    markSheet: String,
+    aadharId: String,
+
+    // Bank Details
+    bankDetails: bankDetailsSchema,
+
     // Transport (Optional)
     transportOpted: { type: Boolean, default: false },
     busRoute: String,
@@ -78,15 +120,28 @@ const studentSchema = new mongoose.Schema(
     // Administrative
     status: {
       type: String,
-      enum: ["Active", "Inactive", "Transfered", "Graduated", "Dropped"],
+      enum: ["Active", "Inactive", "Transferred", "Graduated", "Dropped"],
       default: "Active",
     },
     remarks: String,
-    documents: [
+    documents: [documentSchema],
+
+    // Password Management
+    isFirstLogin: { type: Boolean, default: true },
+    passwordChangedAt: Date,
+
+    // Promotion History
+    promotionHistory: [
       {
-        fileName: String,
-        url: String,
-        uploadedAt: Date,
+        fromClass: String,
+        fromSection: String,
+        toClass: String,
+        toSection: String,
+        fromAcademicYear: String,
+        toAcademicYear: String,
+        promotedAt: Date,
+        reason: String,
+        eligibilityDetails: Object,
       },
     ],
 

@@ -29,6 +29,7 @@ const documentSchema = Joi.object({
 const studentSchema = Joi.object({
   enrollmentNo: Joi.string().max(20).optional(),
   admissionNo: Joi.string().max(20).allow("", null),
+  scholarNumber: Joi.string().max(50).required(),
 
   firstName: Joi.string().max(50).required(),
   middleName: Joi.string().max(50).allow("", null),
@@ -52,24 +53,24 @@ const studentSchema = Joi.object({
   photoUrl: Joi.string().uri().allow("", null),
 
   className: Joi.string()
-    .pattern(/^(?:[1-9]|1[0-2])$/) // classes 1 to 12
+    .max(50)
     .required()
     .messages({
-      "string.pattern.base": "className must be between 1 and 12",
+      "string.empty": "Class name is required",
     }),
 
   section: Joi.string()
-    .pattern(/^[A-F]$/)
+    .max(10)
     .required()
     .messages({
-      "string.pattern.base": "section must be a single letter between A and F",
+      "string.empty": "Section is required",
     }),
 
   academicYear: Joi.string()
-    .pattern(/^\d{4}-\d{4}$/)
+    .max(20)
     .required()
     .messages({
-      "string.pattern.base": "academicYear must be in YYYY-YYYY format",
+      "string.empty": "Academic year is required",
     }),
 
   admissionDate: Joi.date()
@@ -80,17 +81,31 @@ const studentSchema = Joi.object({
   rollNo: Joi.string().max(10).allow("", null),
 
   phone: Joi.string()
-    .pattern(/^\d{10}$/)
-    .allow("", null)
-    .messages({ "string.pattern.base": "Phone must be a 10-digit number" }),
+    .max(20)
+    .allow("", null),
 
   email: Joi.string().email().allow("", null),
 
   address: addressSchema,
 
-  father: guardianSchema.optional(),
-  mother: guardianSchema.optional(),
-  guardian: guardianSchema.optional(),
+  father: Joi.object({
+    name: Joi.string().max(100).required(),
+    phone: Joi.string().max(20).required(),
+    email: Joi.string().email().allow("", null),
+    relation: Joi.string().max(50).default("Father"),
+  }).optional(),
+  mother: Joi.object({
+    name: Joi.string().max(100).required(),
+    phone: Joi.string().max(20).required(),
+    email: Joi.string().email().allow("", null),
+    relation: Joi.string().max(50).default("Mother"),
+  }).optional(),
+  guardian: Joi.object({
+    name: Joi.string().max(100).allow("", null),
+    phone: Joi.string().max(20).allow("", null),
+    email: Joi.string().email().allow("", null),
+    relation: Joi.string().max(50).allow("", null),
+  }).optional(),
 
   transportOpted: Joi.boolean().default(false),
 
@@ -106,10 +121,13 @@ const studentSchema = Joi.object({
     otherwise: Joi.string().max(50).allow("", null),
   }),
 
-  medicalConditions: Joi.array().items(Joi.string().max(50)).allow(null),
+  medicalConditions: Joi.alternatives().try(
+    Joi.array().items(Joi.string().max(50)),
+    Joi.string().max(500)
+  ).allow(null, ""),
 
   status: Joi.string()
-    .valid("Active", "Inactive", "Transfered", "Graduated", "Dropped")
+    .valid("Active", "Inactive", "Transferred", "Graduated", "Dropped")
     .default("Active"),
 
   remarks: Joi.string().max(500).allow("", null),

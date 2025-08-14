@@ -1,0 +1,17 @@
+Class,Section,Day,Time Slot,Subject,Teacher,Room,Period Type
+5,A,Monday,9:00 AM - 9:45 AM,Mathematics,Dr. Sarah Wilson,Room 101,Regular
+5,A,Monday,9:45 AM - 10:30 AM,Science,Mr. Robert Chen,Room 101,Regular
+5,A,Monday,10:30 AM - 11:15 AM,English,Ms. Priya Patel,Room 101,Regular
+5,A,Monday,11:15 AM - 12:00 PM,Social Studies,Mrs. Lisa Singh,Room 101,Regular
+5,A,Monday,12:00 PM - 1:00 PM,Lunch Break,None,None,Break
+5,A,Monday,1:00 PM - 1:45 PM,Mathematics,Dr. Sarah Wilson,Room 101,Regular
+5,A,Monday,1:45 PM - 2:30 PM,Science,Mr. Robert Chen,Room 101,Regular
+5,A,Monday,2:30 PM - 3:15 PM,Physical Education,Coach Johnson,Playground,Regular
+5,A,Tuesday,9:00 AM - 9:45 AM,English,Ms. Priya Patel,Room 101,Regular
+5,A,Tuesday,9:45 AM - 10:30 AM,Mathematics,Dr. Sarah Wilson,Room 101,Regular
+5,A,Tuesday,10:30 AM - 11:15 AM,Science,Mr. Robert Chen,Room 101,Regular
+5,A,Tuesday,11:15 AM - 12:00 PM,Social Studies,Mrs. Lisa Singh,Room 101,Regular
+5,A,Tuesday,12:00 PM - 1:00 PM,Lunch Break,None,None,Break
+5,A,Tuesday,1:00 PM - 1:45 PM,Computer Science,Prof. David Kumar,Lab 1,Regular
+5,A,Tuesday,1:45 PM - 2:30 PM,Art,Ms. Maria Garcia,Art Room,Regular
+5,A,Tuesday,2:30 PM - 3:15 PM,Mathematics,Dr. Sarah Wilson,Room 101,Regular

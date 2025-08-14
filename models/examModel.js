@@ -20,7 +20,7 @@ const examSchema = new mongoose.Schema(
     teacher: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "teacher",
-      required: true,
+      required: false, // Made optional
     },
     examDate: {
       type: Date,

@@ -10,7 +10,7 @@ const paymentTransactionSchema = new mongoose.Schema(
     },
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "student",
       required: true,
     },
     amount: { type: Number, required: true, min: 0 },

@@ -2,15 +2,17 @@ const Class = require("../models/classModel");
 const Student = require("../models/studentData");
 const Teacher = require("../models/teacherModel");
 const Subject = require("../models/subjectModel");
+const { parseCSV } = require("../utils/csvUtils");
+const fs = require("fs");
 
 // Get all classes (admin only)
 exports.getAllClasses = async (req, res) => {
   try {
     const classes = await Class.find()
-      .populate("classTeacher", "name enrollmentNo")
-      .populate("subjects.subject", "name code")
-      .populate("subjects.teacher", "name enrollmentNo")
-      .populate("students", "firstName lastName enrollmentNo")
+      .populate("classTeacher", "name enrollmentNo email contact department designation")
+      .populate("subjects.subject", "name code description")
+      .populate("subjects.teacher", "name enrollmentNo email department")
+      .populate("students", "firstName lastName enrollmentNo rollNo gender className section")
       .sort({ name: 1, section: 1 });
 
     res.json({
@@ -228,6 +230,161 @@ exports.createClass = async (req, res) => {
   }
 };
 
+// Assign/Change class teacher (admin only)
+exports.assignClassTeacher = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { teacherId } = req.body;
+
+    if (!teacherId) {
+      return res.status(400).json({ success: false, message: "teacherId is required" });
+    }
+
+    const teacher = await Teacher.findById(teacherId);
+    if (!teacher) {
+      return res.status(404).json({ success: false, message: "Teacher not found" });
+    }
+
+    const cls = await Class.findByIdAndUpdate(
+      id,
+      { classTeacher: teacherId, updatedBy: req.user?.data?.enrollmentNo || "admin" },
+      { new: true }
+    )
+      .populate("classTeacher", "name enrollmentNo email contact department designation")
+      .populate("subjects.subject", "name code description")
+      .populate("subjects.teacher", "name enrollmentNo email department");
+
+    if (!cls) {
+      return res.status(404).json({ success: false, message: "Class not found" });
+    }
+
+    return res.json({ success: true, message: "Class teacher assigned", class: cls });
+  } catch (error) {
+    console.error("Error assigning class teacher:", error);
+    return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+  }
+};
+
+// Set subject-teacher assignments for class (admin only)
+exports.setClassSubjects = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { subjects } = req.body; // [{ subjectId, teacherId, hoursPerWeek }]
+
+    if (!Array.isArray(subjects)) {
+      return res.status(400).json({ success: false, message: "subjects must be an array" });
+    }
+
+    // Validate all items
+    for (const item of subjects) {
+      if (!item?.subjectId || !item?.teacherId || !item?.hoursPerWeek) {
+        return res.status(400).json({ success: false, message: "Each subject item requires subjectId, teacherId, hoursPerWeek" });
+      }
+      const [subject, teacher] = await Promise.all([
+        Subject.findById(item.subjectId),
+        Teacher.findById(item.teacherId),
+      ]);
+      if (!subject) {
+        return res.status(404).json({ success: false, message: `Subject not found: ${item.subjectId}` });
+      }
+      if (!teacher) {
+        return res.status(404).json({ success: false, message: `Teacher not found: ${item.teacherId}` });
+      }
+      if (Number(item.hoursPerWeek) <= 0) {
+        return res.status(400).json({ success: false, message: "hoursPerWeek must be > 0" });
+      }
+    }
+
+    const mapped = subjects.map((s) => ({
+      subject: s.subjectId,
+      teacher: s.teacherId,
+      hoursPerWeek: Number(s.hoursPerWeek),
+    }));
+
+    const cls = await Class.findByIdAndUpdate(
+      id,
+      { subjects: mapped, updatedBy: req.user?.data?.enrollmentNo || "admin" },
+      { new: true }
+    )
+      .populate("classTeacher", "name enrollmentNo email contact department designation")
+      .populate("subjects.subject", "name code description")
+      .populate("subjects.teacher", "name enrollmentNo email department");
+
+    if (!cls) {
+      return res.status(404).json({ success: false, message: "Class not found" });
+    }
+
+    return res.json({ success: true, message: "Subjects updated", class: cls });
+  } catch (error) {
+    console.error("Error setting class subjects:", error);
+    return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+  }
+};
+
+// Generate default classes for an academic year (admin only)
+exports.generateDefaultClasses = async (req, res) => {
+  try {
+    const { academicYear = "2025-2026", sections = ["A","B","C","D","E","F"], grades } = req.body || {};
+    const gradeNames = grades && Array.isArray(grades) && grades.length > 0
+      ? grades
+      : ["Nursery", "LKG", "UKG", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
+
+    // Ensure placeholder teacher exists
+    let placeholder = await Teacher.findOne({ enrollmentNo: "UNASSIGNED-TEACHER" });
+    if (!placeholder) {
+      placeholder = await Teacher.create({
+        enrollmentNo: "UNASSIGNED-TEACHER",
+        name: "Unassigned Teacher",
+        email: "unassigned@school.local",
+        contact: "0000000000",
+        gender: "Other",
+        status: "Active",
+        isFirstLogin: false,
+      });
+    }
+
+    const created = [];
+    const skipped = [];
+    for (const grade of gradeNames) {
+      for (const section of sections) {
+        const existing = await Class.findOne({ name: grade, section, academicYear });
+        if (existing) {
+          skipped.push({ name: grade, section });
+          continue;
+        }
+        const cls = new Class({
+          name: grade,
+          section,
+          academicYear,
+          classTeacher: placeholder._id,
+          subjects: [],
+          room: `R-${grade}-${section}`,
+          schedule: "TBD",
+          capacity: 40,
+          createdBy: req.user?.data?.enrollmentNo || "admin",
+        });
+        const saved = await cls.save();
+        created.push(saved);
+      }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "Class generation completed",
+      academicYear,
+      created: created.length,
+      skipped: skipped.length,
+      details: {
+        created: created.map((c) => ({ id: c._id, name: c.name, section: c.section })),
+        skipped,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating default classes:", error);
+    return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
+  }
+};
+
 // Update class (admin only)
 exports.updateClass = async (req, res) => {
   try {
@@ -395,3 +552,124 @@ exports.deleteClass = async (req, res) => {
     });
   }
 }; 
+
+// Bulk upload classes (Admin only)
+exports.bulkUploadClasses = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "CSV file is required" });
+    }
+
+    // Helper to normalize headers
+    const sanitizeHeader = (header) =>
+      String(header)
+        .toLowerCase()
+        .replace(/['`’]/g, "")
+        .replace(/[^a-z0-9]/g, "");
+
+    // Map a raw row into canonical keys
+    const mapRow = (row) => {
+      const out = {};
+      for (const [k, v] of Object.entries(row || {})) {
+        const key = sanitizeHeader(k);
+        const value = typeof v === "string" ? v.trim() : v;
+        if (key === "classname" || key === "class") out.name = value;
+        else if (key === "section") out.section = value;
+        else if (key === "academicyear" || key === "session") out.academicYear = value;
+        else if (key === "room" || key === "roomnumber") out.room = value;
+        else if (key === "capacity") out.capacity = Number(value);
+        else if (key === "classteacher" || key === "classteachername") out.classTeacherName = value;
+        else if (key === "schedule") out.schedule = value;
+        else if (key === "subjects") out.subjectsText = value; // optional informational
+      }
+      return out;
+    };
+
+    const parsed = await parseCSV(req.file.path);
+    const total = parsed.length;
+    const savedClasses = [];
+    const failedClasses = [];
+
+    for (let i = 0; i < parsed.length; i++) {
+      const row = parsed[i];
+      const rowNumber = i + 2; // account for header row
+      try {
+        const mapped = mapRow(row);
+        const required = ["name", "section", "academicYear", "room", "capacity", "classTeacherName"];
+        const missing = required.filter((f) => !mapped[f] && mapped[f] !== 0);
+        if (missing.length) {
+          throw new Error(`Missing required field(s): ${missing.join(", ")}`);
+        }
+
+        // Validate teacher by name (case-insensitive exact match)
+        const teacher = await Teacher.findOne({ name: { $regex: `^${mapped.classTeacherName}$`, $options: "i" } });
+        if (!teacher) {
+          throw new Error(`Class teacher not found: ${mapped.classTeacherName}`);
+        }
+
+        // Check for duplicate class for same academic year
+        const existing = await Class.findOne({ name: mapped.name, section: mapped.section, academicYear: mapped.academicYear });
+        if (existing) {
+          throw new Error(`Class already exists for ${mapped.name}-${mapped.section} (${mapped.academicYear})`);
+        }
+
+        // Build subjects array by resolving subject names; assign class teacher by default
+        const subjects = [];
+        if (mapped.subjectsText) {
+          const subjectNames = String(mapped.subjectsText)
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+          for (const subjName of subjectNames) {
+            const subjDoc = await Subject.findOne({ name: { $regex: `^${subjName}$`, $options: 'i' } });
+            if (subjDoc) {
+              subjects.push({
+                subject: subjDoc._id,
+                teacher: teacher._id,
+                hoursPerWeek: 4,
+              });
+            } else {
+              // If subject not found, skip linking for this one
+              console.warn(`Subject not found while linking to class ${mapped.name}-${mapped.section}: ${subjName}`);
+            }
+          }
+        }
+
+        const newClass = new Class({
+          name: mapped.name,
+          section: mapped.section,
+          academicYear: mapped.academicYear,
+          classTeacher: teacher._id,
+          subjects,
+          room: mapped.room,
+          schedule: mapped.schedule || "",
+          capacity: Number.isFinite(mapped.capacity) ? mapped.capacity : parseInt(mapped.capacity, 10) || 0,
+          createdBy: req.user?.enrollmentNo || "admin",
+        });
+
+        const saved = await newClass.save();
+        savedClasses.push({ row: rowNumber, class: saved });
+      } catch (err) {
+        failedClasses.push({ row: rowNumber, reason: err.message, data: row });
+      }
+    }
+
+    // Clean up uploaded file
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+
+    return res.status(200).json({
+      message: "Class bulk upload completed",
+      total,
+      successful: savedClasses.length,
+      failed: failedClasses.length,
+      savedClasses,
+      failedClasses,
+    });
+  } catch (error) {
+    console.error("Error during class bulk upload:", error);
+    if (req.file && req.file.path) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+    }
+    return res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};

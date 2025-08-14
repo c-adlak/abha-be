@@ -4,16 +4,19 @@ const feeCollectionSchema = new mongoose.Schema({
   receiptNumber: { type: String, required: true, unique: true },
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Student",
+    ref: "student",
     required: true,
   },
   academicYear: String,
+  term: { type: String },
   feeComponents: [
     {
       componentName: String,
       amount: Number,
       dueDate: Date,
       isPaid: { type: Boolean, default: false },
+      paidAmount: { type: Number, default: 0 },
+      paidDate: Date,
     },
   ],
   totalAmount: Number,

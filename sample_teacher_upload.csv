@@ -1,0 +1,6 @@
+SR. NO,Enrollment No,First Name,Last Name,Gender,Date of Birth,Email,Contact,Alternate Contact,Street Address,City,State,Postal Code,Country,Designation,Department,Joining Date,Status
+1,T001,Dr. Sarah,Wilson,Female,1985-03-15,sarah.wilson@school.com,9876543210,9876543211,123 Teacher Street,Delhi,Delhi,110001,India,Senior Teacher,Mathematics,2020-06-01,Active
+2,T002,Mr. Robert,Chen,Male,1988-07-22,robert.chen@school.com,9876543212,9876543213,456 Faculty Avenue,Mumbai,Maharashtra,400001,India,Teacher,Science,2021-01-15,Active
+3,T003,Ms. Priya,Patel,Female,1990-11-08,priya.patel@school.com,9876543214,9876543215,789 Staff Road,Bangalore,Karnataka,560001,India,Assistant Teacher,English,2022-03-01,Active
+4,T004,Prof. David,Kumar,Male,1982-12-03,david.kumar@school.com,9876543216,9876543217,321 Professor Lane,Chennai,Tamil Nadu,600001,India,Head of Department,Computer Science,2019-08-01,Active
+5,T005,Mrs. Lisa,Singh,Female,1987-05-20,lisa.singh@school.com,9876543218,9876543219,654 Faculty Street,Hyderabad,Telangana,500001,India,Teacher,Social Studies,2021-09-01,Active

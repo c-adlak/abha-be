@@ -3,6 +3,8 @@ const FeeStructure = require("../models/feeStructure");
 const FeeCollection = require("../models/feeCollection");
 // const PaymentTransaction = require("../models/paymentTransaction");
 const mongoose = require("mongoose");
+const { parseCSV } = require("../utils/csvUtils");
+const fs = require("fs");
 
 exports.getFeeDetails = async (req, res) => {
   try {
@@ -68,6 +70,154 @@ exports.getFeeDetails = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error fetching fee details", error: error.message });
+  }
+};
+
+// Admin: create or update fee structure per class/year
+exports.upsertFeeStructure = async (req, res) => {
+  try {
+    const { academicYear, className, feeComponents, isActive = true } = req.body;
+    if (!academicYear || !className || !Array.isArray(feeComponents) || feeComponents.length === 0) {
+      return res.status(400).json({ message: "academicYear, className, and feeComponents are required" });
+    }
+    const mapped = feeComponents.map(c => ({
+      componentName: c.componentName,
+      amount: Number(c.amount),
+      frequency: c.frequency,
+      dueDate: Number(c.dueDate),
+      isOptional: Boolean(c.isOptional),
+      description: c.description || '',
+    }));
+    const doc = await FeeStructure.findOneAndUpdate(
+      { academicYear, class: className },
+      { academicYear, class: className, feeComponents: mapped, isActive },
+      { new: true, upsert: true, runValidators: true }
+    );
+    return res.json({ message: "Fee structure saved", feeStructure: doc });
+  } catch (error) {
+    return res.status(500).json({ message: "Error saving fee structure", error: error.message });
+  }
+};
+
+// Admin: bulk assign fee collections to all students of a class for the year
+exports.assignFeesToClass = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const { academicYear, className } = req.body;
+    if (!academicYear || !className) {
+      return res.status(400).json({ message: "academicYear and className are required" });
+    }
+    const feeStructure = await FeeStructure.findOne({ academicYear, class: className, isActive: true });
+    if (!feeStructure) {
+      return res.status(404).json({ message: "Fee structure not found for class/year" });
+    }
+    const students = await Student.find({ className, academicYear }).session(session);
+    const now = new Date();
+    for (const student of students) {
+      // One collection per student aggregating all components (simple model)
+      const totalAmount = feeStructure.feeComponents.reduce((sum, c) => {
+        let multiplier = 1;
+        switch (c.frequency) {
+          case 'MONTHLY': multiplier = 12; break;
+          case 'QUARTERLY': multiplier = 4; break;
+          case 'ANNUALLY': multiplier = 1; break;
+          default: multiplier = 1;
+        }
+        return sum + (c.amount * multiplier);
+      }, 0);
+
+      const existing = await FeeCollection.findOne({ studentId: student._id, academicYear }).session(session);
+      if (existing) continue; // skip if already assigned
+
+      await FeeCollection.create([{
+        receiptNumber: `RCPT${Date.now()}${Math.floor(Math.random()*1000)}`,
+        studentId: student._id,
+        academicYear,
+        term: 'ANNUAL',
+        feeComponents: feeStructure.feeComponents.map(c => ({
+          componentName: c.componentName,
+          amount: c.amount,
+          dueDate: new Date(now.getFullYear(), now.getMonth(), c.dueDate),
+          isPaid: false,
+        })),
+        totalAmount,
+        paidAmount: 0,
+        pendingAmount: totalAmount,
+        paymentStatus: 'PENDING',
+        dueDate: new Date(now.getFullYear(), now.getMonth(), 15),
+        isActive: true,
+      }], { session });
+    }
+    await session.commitTransaction();
+    return res.json({ message: `Fees assigned to ${students.length} students for class ${className}` });
+  } catch (error) {
+    await session.abortTransaction();
+    return res.status(500).json({ message: "Error assigning fees", error: error.message });
+  } finally {
+    session.endSession();
+  }
+};
+
+// Admin: bulk upload fee structures via CSV
+exports.bulkUploadFeeStructure = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "CSV file is required" });
+    }
+
+    const rows = await parseCSV(req.file.path);
+    const required = ["academicyear", "class", "componentname", "amount", "frequency", "dueday"]; 
+
+    // normalize and group
+    const sanitize = (s) => String(s || "").trim();
+    const groupMap = new Map(); // key: year|class -> components[]
+
+    for (let i = 0; i < rows.length; i++) {
+      const raw = rows[i];
+      const r = {};
+      for (const [k, v] of Object.entries(raw)) {
+        const key = String(k).toLowerCase().replace(/[^a-z0-9]/g, "");
+        r[key] = sanitize(v);
+      }
+      const missing = required.filter((f) => !r[f]);
+      if (missing.length) {
+        continue; // skip invalid rows silently (or collect errors if needed)
+      }
+      const year = r.academicyear;
+      const cls = r.class;
+      const key = `${year}|${cls}`;
+      const arr = groupMap.get(key) || [];
+      arr.push({
+        componentName: r.componentname,
+        amount: Number(r.amount) || 0,
+        frequency: (r.frequency || "ANNUALLY").toUpperCase(),
+        dueDate: Number(r.dueday) || 1,
+        isOptional: r.isoptional === "true" || r.isoptional === "1",
+        description: r.description || "",
+      });
+      groupMap.set(key, arr);
+    }
+
+    let upserts = 0;
+    for (const [key, components] of groupMap.entries()) {
+      const [academicYear, className] = key.split("|");
+      await FeeStructure.findOneAndUpdate(
+        { academicYear, class: className },
+        { academicYear, class: className, feeComponents: components, isActive: true },
+        { upsert: true, new: true, runValidators: true }
+      );
+      upserts++;
+    }
+
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    return res.json({ message: "Bulk fee structure upload completed", updated: upserts });
+  } catch (error) {
+    // cleanup file
+    if (req.file && req.file.path) {
+      try { fs.unlinkSync(req.file.path); } catch (_) {}
+    }
+    return res.status(500).json({ message: "Error processing CSV", error: error.message });
   }
 };
 
